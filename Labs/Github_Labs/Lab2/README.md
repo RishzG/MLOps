@@ -26,7 +26,7 @@ Watch the tutorial video for this lab at [Github action Lab2](https://youtu.be/c
 
 # Running the Workflow
 ## Customize Model Training
-1. Modify the `train_model.py` script in the `src/` directory according to your dataset and model requirements. This script generates synthetic data for demonstration purposes.
+1. The default pipeline loads the Breast Cancer Wisconsin dataset from `scikit-learn`, scales the features, and trains a logistic regression classifier. Tweak `src/train_model.py` if you want to plug in a different dataset or model.
 
 ## Push Your Changes:
 1. Commit your changes and push them to your forked repository.
@@ -50,44 +50,27 @@ Each time you run the workflow, a new version of the model is created and stored
 The workflow consists of the following steps:
 
 - Generate and Store Timestamp: A timestamp is generated and stored in a file for versioning.
-- Model Training: The `train_model.py` script is executed, which trains a random forest classifier on synthetic data and stores the model in the `models/` directory.
-- Model Evaluation: The `evaluate_model.py` script is executed to evaluate the model's F1 Score on synthetic data, and the results are stored in the `metrics/` directory.
+- Model Training: The `train_model.py` script loads the Breast Cancer Wisconsin dataset, splits it into train/test sets, and fits a scaled logistic regression model. The trained pipeline is saved with a timestamped filename.
+- Model Evaluation: The `evaluate_model.py` script reloads the same dataset split, evaluates the saved model on the test set, and stores accuracy, F1, precision, and recall metrics in the `metrics/` directory.
 - Store and Version the New Model: The trained model is moved to the `models/` directory with a timestamp-based version.
 - Commit and Push Changes: The metrics and updated model are committed to the repository, allowing you to track changes.
 
-# Model Calibration Workflow
+# Automated Retraining Workflows
 ## Overview
-The `model_calibration_on_push.yml` workflow is a part of the automation process for machine learning model calibration within this repository. It is essential for ensuring that the model's predictions are accurate and well-calibrated, a critical step in machine learning applications.
+Two GitHub Actions definitions (`model_calibration_on_push.yml` and `model_calibration.yml`) automate retraining and evaluation of the logistic regression pipeline. One runs on every push to `main`, and the other executes on a nightly cron schedule so the model and metrics stay current without manual intervention.
 
 ## Workflow Purpose
-This workflow's primary purpose is to calibrate a trained machine learning model after each push to the main branch of the repository. Calibration is a crucial step to align model predictions with reality, particularly when dealing with classification tasks. In simple terms, calibration ensures that a model's predicted probabilities match the actual likelihood of an event happening.
+Each workflow provisions a Python runner, installs the dependencies, trains the pipeline on the Breast Cancer Wisconsin dataset, evaluates it on a held-out test set, and versions the resulting artifacts so you can audit model drift over time.
 
 ## Workflow Execution
-Let's break down how this workflow operates step by step:
-
-### Step 1: Trigger on Push to Main Branch
-- This workflow is automatically initiated when changes are pushed to the main branch of the repository. It ensures that the model remains calibrated and up-to-date with the latest data and adjustments.
-
-### Step 2: Prepare Environment
-- The workflow begins by setting up a Python environment and installing the necessary Python libraries and dependencies. This is crucial to ensure that the model calibration process can be executed without any issues.
-
-### Step 3: Load Trained Model
-- The trained machine learning model, which has been previously saved in the `models/` directory, is loaded into memory. This model should be the most recent version, as trained by the `train_model.py` script.
-
-### Step 4: Calibrate Model Probabilities
-- In this step, the model's predicted probabilities are calibrated. Calibration methods, such as Platt scaling or isotonic regression, are applied. These methods adjust the model's predicted probabilities to match the actual likelihood of an event occurring. This calibration step is critical for reliable decision-making based on the model's predictions.
-
-### Step 5: Save Calibrated Model
-- The calibrated model is saved back to the `models/` directory. It is given a distinct identifier to differentiate it from the original, uncalibrated models. This ensures that both the original model and the calibrated model are available for comparison and use.
-
-### Step 6: Commit and Push Changes
-- This final step involves committing the calibrated model and any other relevant files to the repository. It is essential to keep track of the changes made during the calibration process and to store the calibrated model in the repository for future applications and reference.
+1. **Trigger**: Either a push to `main` or the scheduled cron event starts the job.  
+2. **Environment Setup**: The workflow checks out your fork, installs dependencies from `requirements.txt`, and captures a timestamp used to version artifacts.  
+3. **Train**: `src/train_model.py` trains the scaler + logistic regression pipeline and writes `model_<timestamp>_logreg.joblib`.  
+4. **Evaluate**: `src/evaluate_model.py` reloads the same dataset split, scores the model, and emits `<timestamp>_metrics.json` containing accuracy, F1, precision, and recall.  
+5. **Archive**: Both artifacts are moved into `models/` and `metrics/`, then committed back to the repository using the workflow token.
 
 # Customization
-The `model_calibration_on_push.yml` workflow can be customized to align with your specific project requirements. You can modify calibration methods, the directory where the calibrated model is saved, or any other aspects of the calibration process to meet your project's unique needs.
-
-# Integration with Model Training
-This workflow is designed to work seamlessly with the main model training workflow, `model_retraining_on_push.yml`. In the initial workflow, the model is trained, and in this workflow, the calibrated model is generated. The calibrated model can then be used in applications where precise, well-calibrated probabilities are essential.
+Adjust the dataset loader, preprocessing steps, model choice, or evaluation metrics inside `src/train_model.py` and `src/evaluate_model.py`. If you change artifact names or locations, update the workflow YAML files so the move and commit steps still succeed.
 
 # License
 This project is licensed under the MIT License - see the LICENSE file for details.
