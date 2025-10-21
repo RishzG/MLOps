@@ -1,4 +1,4 @@
-name: Testing Github Lab1 Python Unittests
+name: Testing Github Lab2 with Pytest
 
 on:
   push:
@@ -16,13 +16,13 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: 3.8
+        python-version: 3.9
 
     - name: Install dependencies
-      run: pip install -r Labs/Github_Labs/Lab1/requirements.txt
+      run: pip install -r Labs/Github_Labs/Lab2/requirements.txt
 
-    - name: Run unittests
-      run: python -m unittest Labs/Github_Labs/Lab1/test/test_unittest.py
+    - name: Run pytest suite
+      run: pytest Labs/Github_Labs/Lab2/tests
 
 
     - name: Notify on success
